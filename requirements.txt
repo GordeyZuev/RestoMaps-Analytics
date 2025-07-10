@@ -1,0 +1,6 @@
+selenium==4.34.2
+webdriver-manager==4.0.2
+beautifulsoup4==4.13.4
+httpx==0.28.1
+notion-client==2.4.0
+python-dotenv==1.1.1
