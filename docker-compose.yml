@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.10
+    container_name: restomaps_traefik
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    restart: unless-stopped
+    networks:
+      - restomaps_network
+
+  # База данных PostgreSQL (НЕ публикуется наружу)
+  postgres:
+    image: postgres:15-alpine
+    container_name: restomaps_postgres
+    env_file:
+      - config/.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - restomaps_network
+
+  # Веб-приложение (только внутренняя сеть; Traefik проксирует на 8501)
+  app:
+    build: .
+    container_name: restomaps_app
+    env_file:
+      - config/.env
+    environment:
+      POSTGRES_HOST: postgres
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - restomaps_network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.restomaps.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.restomaps.entrypoints=websecure
+      - traefik.http.routers.restomaps.tls.certresolver=letsencrypt
+      - traefik.http.services.restomaps.loadbalancer.server.port=8501
+
+
+volumes:
+  postgres_data:
+  traefik_letsencrypt:
+
+networks:
+  restomaps_network:
+    driver: bridge
+
