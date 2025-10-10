@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.utils import ChromeType
 
 from bs4 import BeautifulSoup
 
@@ -55,7 +56,13 @@ def setup_driver() -> webdriver.Chrome:
     for option in BROWSER_OPTIONS.values():
         options.add_argument(option)
 
-    service = Service(ChromeDriverManager().install())
+    # Явно указываем бинарь Chromium внутри контейнера
+    chrome_bin = os.getenv("CHROME_BIN", "/usr/bin/chromium")
+    if os.path.exists(chrome_bin):
+        options.binary_location = chrome_bin
+
+    # Скачиваем chromedriver, совместимый с Chromium
+    service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
 
