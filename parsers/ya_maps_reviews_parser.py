@@ -570,11 +570,7 @@ def fetch_reviews_for_all_restaurants(
                     if result.get('skip'):
                         skipped_count += 1
                         logger.warning(
-                            f"⊘ {
-                                restaurant.name}: {
-                                result.get(
-                                    'error',
-                                    'Ресторан не найден в Яндекс.Картах')}")
+                            f"⊘ {restaurant.name}: {result.get('error', 'Ресторан не найден в Яндекс.Картах')}")
                     else:
                         error_count += 1
                         logger.error(f"✗ {restaurant.name}: {result.get('error', 'Неизвестная ошибка')}")
