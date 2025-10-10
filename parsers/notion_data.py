@@ -150,9 +150,7 @@ class NotionDataProcessor:
                     if coords.get('full_address'):
                         restaurant_data['address'] = coords['full_address']
                     logger.success(
-                        f"Координаты получены: {
-                            restaurant_data['latitude']}, {
-                            restaurant_data['longitude']}")
+                        f"Координаты получены: {restaurant_data['latitude']}, {restaurant_data['longitude']}")
                 else:
                     logger.warning(f"Не удалось получить координаты для: {restaurant_data['address']}")
             else:
