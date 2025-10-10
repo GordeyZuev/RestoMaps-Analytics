@@ -59,7 +59,7 @@ services:
       - restomaps_network
     labels:
       - traefik.enable=true
-      - traefik.http.routers.restomaps.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.restomaps.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)
       - traefik.http.routers.restomaps.entrypoints=websecure
       - traefik.http.routers.restomaps.tls.certresolver=letsencrypt
       - traefik.http.services.restomaps.loadbalancer.server.port=8501
