@@ -56,9 +56,9 @@ def render_folium_map(map_df: pd.DataFrame, selected_place_id: Optional[int] = N
             if r.get('processed_tags'):
                 if tags_html:
                     processed_tags_html += "<br/>"
-                processed_tags_html += f"<span style='color: #32CD32;'>Обработанные: {
-                    ', '.join(
-                        r.get('processed_tags'))}</span>"
+                processed_tags_html += (
+                    f"<span style='color: #32CD32;'>Обработанные: {', '.join(r.get('processed_tags'))}</span>"
+                )
 
             yandex_rating = r.get('yandex_rating')
             yandex_rating_str = f"{yandex_rating:.1f}" if yandex_rating is not None else "—"
