@@ -1,4 +1,5 @@
-from typing import Dict, Any
+from typing import Any
+
 from jobs.base_job import BaseJob
 from parsers.notion_data import sync_notion_data
 
@@ -9,7 +10,7 @@ class NotionSyncJob(BaseJob):
     def __init__(self):
         super().__init__("notion_sync")
 
-    def execute(self) -> Dict[str, Any]:
+    def execute(self) -> dict[str, Any]:
         """Выполнить синхронизацию с Notion"""
         self.logger.info("Начинаем синхронизацию с Notion...")
 
@@ -20,5 +21,5 @@ class NotionSyncJob(BaseJob):
         return {
             "sync_results": result["sync_results"],
             "summary": result["summary"],
-            "timestamp": result["timestamp"]
+            "timestamp": result["timestamp"],
         }

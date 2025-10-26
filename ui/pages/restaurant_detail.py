@@ -1,20 +1,22 @@
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 from database.database import SessionLocal, init_db
 from database.models import Review
 from logger import logger
-from ui.components.metrics import render_restaurant_metrics, render_restaurant_info
-from ui.components.charts import render_weekly_ratings_chart, render_weekly_chart, render_rating_distribution_chart
+from ui.components.charts import (
+    render_rating_distribution_chart,
+    render_weekly_chart,
+    render_weekly_ratings_chart,
+)
+from ui.components.metrics import render_restaurant_info, render_restaurant_metrics
 
 
 @st.cache_data(show_spinner=False)
 def load_reviews_df(restaurant_id: int) -> pd.DataFrame:
-    """Загружает отзывы для конкретного ресторана"""
-
-
-    Session = get_db_session()
-    db = Session()
+    """Загружает отзывы для конкретного ресторана."""
+    session = get_db_session()
+    db = session()
     try:
         reviews = (
             db.query(Review)
@@ -43,15 +45,14 @@ def load_reviews_df(restaurant_id: int) -> pd.DataFrame:
 
 @st.cache_resource
 def get_db_session():
-    """Получает сессию базы данных"""
-
+    """Получает сессию базы данных."""
     logger.info("Инициализация базы данных")
     init_db()
     return SessionLocal
 
 
 def render_restaurant_detail(restaurant_row: pd.Series) -> None:
-    """Отображает детальную информацию о ресторане"""
+    """Отображает детальную информацию о ресторане."""
     st.markdown(f"## Анализ места: :red-background[{restaurant_row['name']}]")
 
     render_place_info(restaurant_row)
@@ -67,15 +68,22 @@ def render_restaurant_detail(restaurant_row: pd.Series) -> None:
 
 
 def render_place_info(restaurant_row: pd.Series) -> None:
-    """Отображает информацию о типе места и тегах"""
-    place_type = restaurant_row.get('place_type', '')
-    tags = restaurant_row.get('tags', [])
-    processed_tags = restaurant_row.get('processed_tags', [])
+    """Отображает информацию о типе места и тегах."""
+    place_type = restaurant_row.get("place_type", "")
+    tags = restaurant_row.get("tags", [])
+    processed_tags = restaurant_row.get("processed_tags", [])
 
     info_content = ""
-    if place_type or (isinstance(tags, list) and tags) or (isinstance(processed_tags, list) and processed_tags):
+    if (
+        place_type
+        or (isinstance(tags, list) and tags)
+        or (isinstance(processed_tags, list) and processed_tags)
+    ):
         info_content += '<div class="stMetric">'
-        info_content += '<div style="display: flex; flex-wrap: wrap; gap: 2px; align-items: center; justify-content: flex-start;">'
+        info_content += (
+            '<div style="display: flex; flex-wrap: wrap; gap: 2px; '
+            'align-items: center; justify-content: flex-start;">'
+        )
 
         if place_type:
             info_content += f'<span class="place-type-container">{place_type}</span>'
@@ -86,17 +94,21 @@ def render_place_info(restaurant_row: pd.Series) -> None:
 
         if isinstance(processed_tags, list) and processed_tags:
             for tag in processed_tags:
-                info_content += f'<span class="tag-container" style="background-color: #e8f5e9; color: #2e7d32; border: 1px solid #66bb6a;">{tag}</span>'
+                info_content += (
+                    f'<span class="tag-container" '
+                    f'style="background-color: #e8f5e9; color: #2e7d32; '
+                    f'border: 1px solid #66bb6a;">{tag}</span>'
+                )
 
-        info_content += '</div>'
-        info_content += '</div>'
+        info_content += "</div>"
+        info_content += "</div>"
 
     if info_content:
         st.markdown(info_content, unsafe_allow_html=True)
 
 
 def render_place_details(restaurant_row: pd.Series) -> None:
-    """Отображает детальную информацию о месте"""
+    """Отображает детальную информацию о месте."""
     st.markdown(" ")
     st.markdown("**Информация о месте:**")
     info_col1, info_col2 = st.columns(2)
@@ -105,13 +117,15 @@ def render_place_details(restaurant_row: pd.Series) -> None:
         st.markdown(f"**Адрес:** {restaurant_row.get('address', '—')}")
 
     with info_col2:
-        if restaurant_row.get('yandex_maps_url'):
-            st.link_button("🔗 Открыть на Яндекс.Картах", restaurant_row['yandex_maps_url'])
+        if restaurant_row.get("yandex_maps_url"):
+            st.link_button(
+                "🔗 Открыть на Яндекс.Картах", restaurant_row["yandex_maps_url"]
+            )
 
 
 def render_my_comment(restaurant_row: pd.Series) -> None:
-    """Отображает мой комментарий"""
-    my_comment = restaurant_row.get('my_comment', '')
+    """Отображает мой комментарий."""
+    my_comment = restaurant_row.get("my_comment", "")
     if my_comment and my_comment.strip():
         st.markdown(" ")
         st.markdown("**Мой комментарий:**")
@@ -119,7 +133,7 @@ def render_my_comment(restaurant_row: pd.Series) -> None:
 
 
 def render_restaurant_charts(reviews_df: pd.DataFrame) -> None:
-    """Отображает графики для ресторана"""
+    """Отображает графики для ресторана."""
     st.markdown(" ")
     weekly_data = render_weekly_ratings_chart(reviews_df)
 
@@ -139,41 +153,61 @@ def render_restaurant_charts(reviews_df: pd.DataFrame) -> None:
 
 
 def render_weekly_metrics(weekly_data: pd.DataFrame) -> None:
-    """Отображает метрики по неделям"""
+    """Отображает метрики по неделям."""
     if len(weekly_data) > 1:
         st.markdown(" ")
         col1, col2 = st.columns(2)
         with col1:
-            trend = "📈 Растет" if weekly_data['avg_rating'].iloc[-1] > weekly_data['avg_rating'].iloc[0] else "📉 Падает"
-            st.markdown(f"""
+            trend = (
+                "📈 Растет"
+                if weekly_data["avg_rating"].iloc[-1]
+                > weekly_data["avg_rating"].iloc[0]
+                else "📉 Падает"
+            )
+            st.markdown(
+                f"""
             <div class="stMetric">
                 <div class="metric-title">Тренд оценки</div>
                 <div class="metric-value">{trend}</div>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
         with col2:
-            avg_reviews_per_week = weekly_data['review_count'].mean()
-            st.markdown(f"""
+            avg_reviews_per_week = weekly_data["review_count"].mean()
+            st.markdown(
+                f"""
             <div class="stMetric">
                 <div class="metric-title">Среднее количество отзывов за неделю</div>
                 <div class="metric-value">{avg_reviews_per_week:.1f}</div>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
 
 
 def render_reviews_section(reviews_df: pd.DataFrame) -> None:
-    """Отображает секцию с отзывами"""
+    """Отображает секцию с отзывами."""
     st.markdown(" ")
     st.markdown("**Отзывы:**")
     if reviews_df.empty:
         st.caption("Отзывы не найдены")
     else:
-        st.dataframe(reviews_df[[c for c in ["original_date",
-                                             "author",
-                                             "rating",
-                                             "text",
-                                             "processed_verdict",
-                                             "processed_tags"] if c in reviews_df.columns]].head(50),
-                     use_container_width=True,
-                     height=350,
-                     )
+        st.dataframe(
+            reviews_df[
+                [
+                    c
+                    for c in [
+                        "original_date",
+                        "author",
+                        "rating",
+                        "text",
+                        "processed_verdict",
+                        "processed_tags",
+                    ]
+                    if c in reviews_df.columns
+                ]
+            ].head(50),
+            use_container_width=True,
+            height=350,
+        )

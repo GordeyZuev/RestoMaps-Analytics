@@ -26,5 +26,15 @@ folium==0.17.0
 streamlit-folium==0.23.0
 plotly==5.17.0
 
+# Scientific computing (required by pandas, streamlit)
+numpy>=1.26.0,<2.3
+scipy>=1.14.0
+
 # Task scheduling
 apscheduler==3.10.4
+
+# CLI interface
+click==8.1.7
+
+# Development tools
+ruff==0.7.4

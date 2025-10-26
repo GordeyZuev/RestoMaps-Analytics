@@ -1,13 +1,12 @@
+from sqlalchemy import and_, text
 
 from database.database import SessionLocal
 from database.models import Review
-from parsers.nlp_analyzer import ReviewProcessor
-from sqlalchemy import and_, text
 from logger import logger
-from typing import Dict, Optional
+from parsers.nlp_analyzer import ReviewProcessor
 
 
-def process_review_nlp(db, review_id: int, processor: ReviewProcessor) -> Optional[Review]:
+def process_review_nlp(db, review_id: int, processor: ReviewProcessor) -> Review | None:
     review = db.query(Review).filter(Review.id == review_id).first()
 
     if not review or not review.comment_text:
@@ -15,13 +14,12 @@ def process_review_nlp(db, review_id: int, processor: ReviewProcessor) -> Option
 
     try:
         result = processor.process_review(
-            text=review.comment_text,
-            rating=review.rating
+            text=review.comment_text, rating=review.rating
         )
 
-        review.processed_verdict = result['processed_verdict']
-        review.processed_tags = result['processed_tags']
-        review.sentiment_score = result['sentiment_score']
+        review.processed_verdict = result["processed_verdict"]
+        review.processed_tags = result["processed_tags"]
+        review.sentiment_score = result["sentiment_score"]
 
         return review
     except Exception as e:
@@ -29,17 +27,16 @@ def process_review_nlp(db, review_id: int, processor: ReviewProcessor) -> Option
         return None
 
 
-def process_restaurant_reviews(restaurant_id: int, force_reprocess: bool = False, batch_size: int = 100) -> int:
+def process_restaurant_reviews(
+    restaurant_id: int, force_reprocess: bool = False, batch_size: int = 100
+) -> int:
     """Обрабатывает все отзывы ресторана"""
     db = SessionLocal()
     processor = ReviewProcessor()
 
     try:
         query = db.query(Review).filter(
-            and_(
-                Review.restaurant_id == restaurant_id,
-                Review.comment_text.isnot(None)
-            )
+            and_(Review.restaurant_id == restaurant_id, Review.comment_text.isnot(None))
         )
 
         if not force_reprocess:
@@ -64,14 +61,18 @@ def process_restaurant_reviews(restaurant_id: int, force_reprocess: bool = False
                 logger.info(f"Обработано {i}/{total} отзывов")
 
         db.commit()
-        logger.success(f"Обработано {processed}/{total} отзывов ресторана {restaurant_id}")
+        logger.success(
+            f"Обработано {processed}/{total} отзывов ресторана {restaurant_id}"
+        )
         return processed
 
     finally:
         db.close()
 
 
-def process_all_reviews(force_reprocess: bool = False, batch_size: int = 100) -> Dict[str, int]:
+def process_all_reviews(
+    force_reprocess: bool = False, batch_size: int = 100
+) -> dict[str, int]:
     db = SessionLocal()
     processor = ReviewProcessor()
 
@@ -101,15 +102,21 @@ def process_all_reviews(force_reprocess: bool = False, batch_size: int = 100) ->
 
             if i % batch_size == 0:
                 db.commit()
-                logger.info(f"Прогресс: {i}/{total_reviews} ({processed_count} успешно, {error_count} ошибок)")
+                logger.info(
+                    f"Прогресс: {i}/{total_reviews} "
+                    f"({processed_count} успешно, {error_count} ошибок)"
+                )
 
         db.commit()
-        logger.success(f"✓ Обработка завершена: {processed_count} успешно, {error_count} ошибок из {total_reviews}")
+        logger.success(
+            f"✓ Обработка завершена: {processed_count} успешно, "
+            f"{error_count} ошибок из {total_reviews}"
+        )
 
         return {
             "total": total_reviews,
             "processed": processed_count,
-            "errors": error_count
+            "errors": error_count,
         }
 
     finally:
@@ -121,8 +128,12 @@ def get_nlp_statistics():
 
     try:
         total_reviews = db.query(Review).count()
-        reviews_with_text = db.query(Review).filter(Review.comment_text.isnot(None)).count()
-        processed_reviews = db.query(Review).filter(Review.processed_verdict.isnot(None)).count()
+        reviews_with_text = (
+            db.query(Review).filter(Review.comment_text.isnot(None)).count()
+        )
+        processed_reviews = (
+            db.query(Review).filter(Review.processed_verdict.isnot(None)).count()
+        )
 
         logger.info("=" * 60)
         logger.info("СТАТИСТИКА NLP ОБРАБОТКИ")
@@ -134,13 +145,15 @@ def get_nlp_statistics():
         logger.info("=" * 60)
 
         if processed_reviews > 0:
-            verdict_stats = db.execute(text("""
+            verdict_stats = db.execute(
+                text("""
                 SELECT processed_verdict, COUNT(*) as count
                 FROM reviews
                 WHERE processed_verdict IS NOT NULL
                 GROUP BY processed_verdict
                 ORDER BY count DESC
-            """)).fetchall()
+            """)
+            ).fetchall()
 
             logger.info("\nРаспределение по вердиктам:")
             for verdict, count in verdict_stats:

@@ -1,7 +1,9 @@
-from typing import Dict, Any
-from apscheduler.schedulers.background import BackgroundScheduler
+from typing import Any
+
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.schedulers.background import BackgroundScheduler
+
 from logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,25 +19,17 @@ class Scheduler:
 
     def _init_scheduler(self) -> None:
         """Инициализация планировщика"""
-        jobstores = {
-            'default': MemoryJobStore()
-        }
+        jobstores = {"default": MemoryJobStore()}
 
-        executors = {
-            'default': ThreadPoolExecutor(max_workers=4)
-        }
+        executors = {"default": ThreadPoolExecutor(max_workers=4)}
 
-        job_defaults = {
-            'coalesce': True,
-            'max_instances': 1,
-            'misfire_grace_time': 300
-        }
+        job_defaults = {"coalesce": True, "max_instances": 1, "misfire_grace_time": 300}
 
         self.scheduler = BackgroundScheduler(
             jobstores=jobstores,
             executors=executors,
             job_defaults=job_defaults,
-            timezone='Europe/Moscow'
+            timezone="Europe/Moscow",
         )
 
         logger.info("Планировщик инициализирован")
@@ -69,7 +63,7 @@ class Scheduler:
         """Получить список задач"""
         return self.scheduler.get_jobs()
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Получить статус планировщика"""
         jobs = self.get_jobs()
         return {
@@ -79,8 +73,10 @@ class Scheduler:
                 {
                     "id": job.id,
                     "name": job.name,
-                    "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None
+                    "next_run_time": job.next_run_time.isoformat()
+                    if job.next_run_time
+                    else None,
                 }
                 for job in jobs
-            ]
+            ],
         }

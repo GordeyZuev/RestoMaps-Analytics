@@ -1,16 +1,13 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from .models import Base
+
 from config.settings import settings
 from logger import logger
 
+from .models import Base
+
 DATABASE_URL = settings.database_url
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,
-    pool_pre_ping=True,
-    pool_recycle=300
-)
+engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True, pool_recycle=300)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -23,7 +20,12 @@ def create_database_if_not_exists():
         temp_engine = create_engine(postgres_url, isolation_level="AUTOCOMMIT")
 
         with temp_engine.connect() as conn:
-            result = conn.execute(text(f"SELECT 1 FROM pg_database WHERE datname = '{settings.POSTGRES_DB}'"))
+            result = conn.execute(
+                text(
+                    "SELECT 1 FROM pg_database WHERE datname = :db_name"
+                ),
+                {"db_name": settings.POSTGRES_DB}
+            )
             if not result.fetchone():
                 conn.execute(text(f"CREATE DATABASE {settings.POSTGRES_DB}"))
                 logger.success(f"Создана база данных: {settings.POSTGRES_DB}")
@@ -31,7 +33,10 @@ def create_database_if_not_exists():
                 logger.info(f"База данных уже существует: {settings.POSTGRES_DB}")
 
     except Exception:
-        logger.exception("Ошибка при создании базы данных. Проверьте подключение к PostgreSQL и настройки")
+        logger.exception(
+            "Ошибка при создании базы данных. "
+            "Проверьте подключение к PostgreSQL и настройки"
+        )
 
 
 def create_tables():
@@ -49,8 +54,7 @@ def get_db():
 
 
 def init_db(auto_create_db: bool = False):
-    """
-    Инициализация базы данных
+    """Инициализация базы данных
 
     Args:
         auto_create_db: если True, автоматически создает БД если её нет
@@ -71,18 +75,29 @@ def reset_database():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        db.execute(text("CREATE INDEX IF NOT EXISTS idx_restaurants_notion_id ON restaurants(notion_id);"))
-        db.execute(text("CREATE INDEX IF NOT EXISTS idx_restaurants_city ON restaurants(city);"))
-        db.execute(text("CREATE INDEX IF NOT EXISTS idx_restaurants_visited ON restaurants(visited);"))
+        db.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS idx_restaurants_notion_id "
+                "ON restaurants(notion_id);"
+            )
+        )
+        db.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS idx_restaurants_city ON restaurants(city);"
+            )
+        )
+        db.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS idx_restaurants_visited "
+                "ON restaurants(visited);"
+            )
+        )
         db.commit()
         logger.success("База данных пересоздана и индексы созданы")
     except Exception:
         logger.exception("Ошибка при создании индексов после пересоздания базы данных")
     finally:
         db.close()
-
-
-
 
 
 if __name__ == "__main__":

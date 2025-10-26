@@ -1,8 +1,9 @@
 import os
+
 from dotenv import load_dotenv
 
 # Загружаем переменные окружения
-load_dotenv('config/.env')
+load_dotenv("config/.env")
 
 
 class Settings:

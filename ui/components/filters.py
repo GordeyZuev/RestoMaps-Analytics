@@ -1,10 +1,11 @@
-import streamlit as st
+from typing import Any
+
 import pandas as pd
-from typing import List, Any
+import streamlit as st
 
 
 def render_sidebar_filters(restaurants_df: pd.DataFrame) -> dict:
-    """Отображает фильтры в боковой панели"""
+    """Отображает фильтры в боковой панели."""
     st.sidebar.title("Фильтры")
 
     if st.sidebar.button("🔄 Обновить данные", use_container_width=True):
@@ -13,14 +14,26 @@ def render_sidebar_filters(restaurants_df: pd.DataFrame) -> dict:
 
     st.sidebar.divider()
 
-    cities = sorted([c for c in restaurants_df["city"].dropna().unique().tolist()],
-                    key=lambda x: len(x)) if not restaurants_df.empty else []
-    selected_cities = st.sidebar.multiselect("Города", options=cities, default=cities[0] if cities else [])
+    cities = (
+        sorted(
+            restaurants_df["city"].dropna().unique(),
+            key=lambda x: len(x),
+        )
+        if not restaurants_df.empty
+        else []
+    )
+    selected_cities = st.sidebar.multiselect(
+        "Города", options=cities, default=cities[0] if cities else []
+    )
 
     type_options = []
     if not restaurants_df.empty and "place_type" in restaurants_df.columns:
-        type_options = sorted([t for t in restaurants_df["place_type"].dropna().unique().tolist()])
-    selected_types = st.sidebar.multiselect("Типы мест", options=type_options, default=type_options)
+        type_options = sorted(
+            restaurants_df["place_type"].dropna().unique()
+        )
+    selected_types = st.sidebar.multiselect(
+        "Типы мест", options=type_options, default=type_options
+    )
 
     visited_mode = st.sidebar.selectbox(
         "Посещенность",
@@ -28,9 +41,11 @@ def render_sidebar_filters(restaurants_df: pd.DataFrame) -> dict:
         index=0,
     )
 
-    rating_range = st.sidebar.slider("Рейтинг Яндекс.Карт", min_value=0.0, max_value=5.0, value=(0.0, 5.0), step=0.1)
+    rating_range = st.sidebar.slider(
+        "Рейтинг Яндекс.Карт", min_value=0.0, max_value=5.0, value=(0.0, 5.0), step=0.1
+    )
 
-    unique_tags: List[str] = []
+    unique_tags: list[str] = []
     if not restaurants_df.empty and "tags" in restaurants_df.columns:
         for tags in restaurants_df["tags"].dropna().tolist():
             if isinstance(tags, list):
@@ -48,12 +63,12 @@ def render_sidebar_filters(restaurants_df: pd.DataFrame) -> dict:
         "visited_mode": visited_mode,
         "rating_range": rating_range,
         "tags": selected_tags,
-        "search_text": search_text
+        "search_text": search_text,
     }
 
 
 def apply_filters(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
-    """Применяет фильтры к DataFrame"""
+    """Применяет фильтры к DataFrame."""
     if df.empty:
         return df
 
@@ -65,12 +80,15 @@ def apply_filters(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
     if filters["visited_mode"] == "Только посещенные":
         filtered = filtered[filtered["visited"]]
     elif filters["visited_mode"] == "Только не посещенные":
-        filtered = filtered[(filtered["visited"] == False) | (filtered["visited"].isna())]
+        filtered = filtered[
+            (not filtered["visited"]) | (filtered["visited"].isna())
+        ]
 
     if filters["types"]:
         filtered = filtered[filtered["place_type"].isin(filters["types"])]
 
     if filters["tags"]:
+
         def has_all_tags(tags_value: Any) -> bool:
             if not isinstance(tags_value, list):
                 return False

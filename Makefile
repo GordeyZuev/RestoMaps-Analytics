@@ -1,4 +1,4 @@
-.PHONY: up down logs notion reviews backup build restart status shell clean help
+.PHONY: up down logs notion reviews backup build restart status shell clean help lint format check
 
 # Запуск
 up:
@@ -50,11 +50,26 @@ shell:
 db:
 	docker-compose exec postgres psql -U postgres -d restomaps_analytics
 
-# Очистка (остановка + удаление контейнеров)
+# Очистка Python кэша и временных файлов
 clean:
+	@echo "🧹 Очистка Python кэша и временных файлов..."
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	find . -type f -name "*.pyo" -delete 2>/dev/null || true
+	find . -type f -name "*.pyd" -delete 2>/dev/null || true
+	find . -type f -name "*.so" -delete 2>/dev/null || true
+	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+	@echo "✅ Python кэш и временные файлы очищены"
+
+# Полная очистка Docker (контейнеры + volumes)
+clean-docker:
+	@echo "🐳 Очистка Docker контейнеров и volumes..."
 	docker-compose down -v
 	docker system prune -f
-	@echo "✅ Контейнеры и volumes очищены"
+	@echo "✅ Docker контейнеры и volumes очищены"
 
 # Очистка логов
 clean-logs:
@@ -82,6 +97,20 @@ stats:
 deploy: build up
 	@echo "🚀 Деплой завершен"
 
+# Линтинг и форматирование кода
+lint:
+	@echo "🔍 Запуск линтера Ruff..."
+	python3 -m ruff check .
+	@echo "✅ Линтинг завершен"
+
+format:
+	@echo "🎨 Форматирование кода..."
+	python3 -m ruff format .
+	@echo "✅ Форматирование завершено"
+
+check: lint format
+	@echo "✅ Проверка кода завершена"
+
 # Справка
 help:
 	@echo "📋 Доступные команды:"
@@ -94,8 +123,14 @@ help:
 	@echo ""
 	@echo "🔧 Управление:"
 	@echo "  make build      - Пересборка контейнеров"
-	@echo "  make clean      - Очистка контейнеров и volumes"
+	@echo "  make clean      - Очистка Python кэша и временных файлов"
+	@echo "  make clean-docker - Очистка Docker контейнеров и volumes"
 	@echo "  make deploy     - Обновление и перезапуск"
+	@echo ""
+	@echo "💻 Разработка:"
+	@echo "  make lint       - Проверка кода линтером"
+	@echo "  make format     - Форматирование кода"
+	@echo "  make check      - Линтинг + форматирование"
 	@echo ""
 	@echo "📊 Мониторинг:"
 	@echo "  make logs       - Просмотр логов"
@@ -112,5 +147,7 @@ help:
 	@echo "  make backup     - Бэкап БД"
 	@echo ""
 	@echo "🧹 Очистка:"
+	@echo "  make clean      - Очистка Python кэша и временных файлов"
+	@echo "  make clean-docker - Очистка Docker контейнеров и volumes"
 	@echo "  make clean-logs - Очистка логов"
 

@@ -1,14 +1,14 @@
-import httpx
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Any
+
+import httpx
+
 from config.settings import settings
 from logger import logger
 
 
-async def get_coord_by_address(address: str) -> Optional[Dict[str, Any]]:
-    """
-    Получение координат по адресу через Яндекс.Геокодер API
-    """
+async def get_coord_by_address(address: str) -> dict[str, Any] | None:
+    """Получение координат по адресу через Яндекс.Геокодер API."""
     if not settings.YA_GEO_CODER_API_KEY:
         logger.warning("YA_GEO_CODER_API_KEY не установлен — геокодирование недоступно")
         return None
@@ -17,7 +17,7 @@ async def get_coord_by_address(address: str) -> Optional[Dict[str, Any]]:
     params = {
         "geocode": address,
         "apikey": settings.YA_GEO_CODER_API_KEY,
-        "format": "json"
+        "format": "json",
     }
 
     async with httpx.AsyncClient() as client:
@@ -27,19 +27,24 @@ async def get_coord_by_address(address: str) -> Optional[Dict[str, Any]]:
             response.raise_for_status()
             data = response.json()
 
-            feature_member = data['response']['GeoObjectCollection']['featureMember']
+            feature_member = data["response"]["GeoObjectCollection"]["featureMember"]
             if feature_member:
-                geo_object = feature_member[0]['GeoObject']
-                point = geo_object['Point']
-                coords = point['pos'].split()
+                geo_object = feature_member[0]["GeoObject"]
+                point = geo_object["Point"]
+                coords = point["pos"].split()
                 longitude, latitude = float(coords[0]), float(coords[1])
 
                 result = {
-                    'latitude': latitude,
-                    'longitude': longitude,
-                    'full_address': geo_object['metaDataProperty']['GeocoderMetaData']['text']
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "full_address": geo_object["metaDataProperty"]["GeocoderMetaData"][
+                        "text"
+                    ],
                 }
-                logger.info(f"Геокодирование успешно: '{address}' -> ({result['latitude']}, {result['longitude']})")
+                logger.info(
+                    f"Геокодирование успешно: '{address}' -> "
+                    f"({result['latitude']}, {result['longitude']})"
+                )
                 return result
             return None
 
@@ -49,7 +54,7 @@ async def get_coord_by_address(address: str) -> Optional[Dict[str, Any]]:
 
 
 if __name__ == "__main__":
-    test_address = 'Страстной бул., 12, стр. 5, Москва'
+    test_address = "Страстной бул., 12, стр. 5, Москва"
     logger.info(f"Тест геокодирования — адрес: {test_address}")
 
     coord = asyncio.run(get_coord_by_address(test_address))

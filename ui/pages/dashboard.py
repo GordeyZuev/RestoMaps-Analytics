@@ -1,26 +1,25 @@
-import streamlit as st
+from typing import Any
+
 import pandas as pd
-from typing import List, Dict, Any
 from sqlalchemy import and_
+import streamlit as st
 
 from database.database import SessionLocal, init_db
 from database.models import Restaurant
 from logger import logger
-from ui.components.metrics import render_summary_metrics
-from ui.components.filters import render_sidebar_filters, apply_filters
-from ui.components.maps import render_map_section
 from ui.components.charts import render_analytics_charts
+from ui.components.filters import apply_filters, render_sidebar_filters
+from ui.components.maps import render_map_section
+from ui.components.metrics import render_summary_metrics
 
 
 @st.cache_data(ttl=300, show_spinner=False)  # Обновление каждые 5 минут
 def load_restaurants_df() -> pd.DataFrame:
-    """Загружает данные ресторанов из базы данных"""
-
-
-    Session = get_db_session()
-    db = Session()
+    """Загружает данные ресторанов из базы данных."""
+    session = get_db_session()
+    db = session()
     try:
-        restaurants: List[Restaurant] = (
+        restaurants: list[Restaurant] = (
             db.query(Restaurant)
             .filter(
                 and_(
@@ -32,7 +31,7 @@ def load_restaurants_df() -> pd.DataFrame:
             )
             .all()
         )
-        records: List[Dict[str, Any]] = []
+        records: list[dict[str, Any]] = []
         for r in restaurants:
             personal_ratings = [
                 v
@@ -44,7 +43,11 @@ def load_restaurants_df() -> pd.DataFrame:
                 ]
                 if v is not None
             ]
-            my_avg_rating = round(sum(personal_ratings) / len(personal_ratings), 2) if personal_ratings else None
+            my_avg_rating = (
+                round(sum(personal_ratings) / len(personal_ratings), 2)
+                if personal_ratings
+                else None
+            )
 
             # Собираем все processed_tags из отзывов ресторана и считаем их частоту
             tag_counts = {}
@@ -54,7 +57,9 @@ def load_restaurants_df() -> pd.DataFrame:
                         tag_counts[tag] = tag_counts.get(tag, 0) + 1
 
             # Берем 4 самых популярных тега
-            top_processed_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:4]
+            top_processed_tags = sorted(
+                tag_counts.items(), key=lambda x: x[1], reverse=True
+            )[:4]
             unique_processed_tags = [tag for tag, count in top_processed_tags]
 
             records.append(
@@ -86,11 +91,27 @@ def load_restaurants_df() -> pd.DataFrame:
         if df.empty:
             df = pd.DataFrame(
                 columns=[
-                    "id", "notion_id", "name", "place_type", "city", "address",
-                    "latitude", "longitude", "yandex_rating", "visited",
-                    "my_service_rating", "my_food_rating", "my_coffee_rating", "my_interior_rating",
-                    "my_avg_rating", "tags", "processed_tags", "my_comment", "yandex_maps_url",
-                    "last_updated", "created_at",
+                    "id",
+                    "notion_id",
+                    "name",
+                    "place_type",
+                    "city",
+                    "address",
+                    "latitude",
+                    "longitude",
+                    "yandex_rating",
+                    "visited",
+                    "my_service_rating",
+                    "my_food_rating",
+                    "my_coffee_rating",
+                    "my_interior_rating",
+                    "my_avg_rating",
+                    "tags",
+                    "processed_tags",
+                    "my_comment",
+                    "yandex_maps_url",
+                    "last_updated",
+                    "created_at",
                 ]
             )
         return df
@@ -100,8 +121,7 @@ def load_restaurants_df() -> pd.DataFrame:
 
 @st.cache_resource
 def get_db_session():
-    """Получает сессию базы данных"""
-
+    """Получает сессию базы данных."""
     logger.info("Инициализация базы данных")
     init_db()
     return SessionLocal
@@ -110,7 +130,7 @@ def get_db_session():
 def render_dashboard() -> None:
     if "auto_select_first" not in st.session_state:
         st.session_state["auto_select_first"] = True
-    
+
     restaurants_df = load_restaurants_df()
 
     filters = render_sidebar_filters(restaurants_df)
@@ -139,7 +159,7 @@ def render_dashboard() -> None:
 
 
 def render_restaurant_selector(filtered_df: pd.DataFrame) -> None:
-    """Отображает селектор ресторана и детали"""
+    """Отображает селектор ресторана и детали."""
     selected_row = None
     selected_place_id = st.session_state.get("selected_place_id")
     if selected_place_id and not filtered_df.empty and "id" in filtered_df.columns:
@@ -165,9 +185,10 @@ def render_restaurant_selector(filtered_df: pd.DataFrame) -> None:
 
         selected_name = st.selectbox(
             "Выберите место",
-            options=["—"] + names,
+            options=["—", *names],
             index=current_index,
-            key="place_select_name")
+            key="place_select_name",
+        )
 
     if selected_name and selected_name != "—":
         sel_row = filtered_df[filtered_df["name"] == selected_name].head(1)
@@ -180,22 +201,40 @@ def render_restaurant_selector(filtered_df: pd.DataFrame) -> None:
 
     if selected_row is not None:
         from ui.pages.restaurant_detail import render_restaurant_detail
+
         render_restaurant_detail(selected_row)
     else:
-        st.caption("Наведите на точку на карте или выберите из списка, чтобы увидеть детали")
+        st.caption(
+            "Наведите на точку на карте или выберите из списка, чтобы увидеть детали"
+        )
 
 
 def render_restaurants_table(filtered_df: pd.DataFrame) -> None:
-    """Отображает таблицу ресторанов"""
+    """Отображает таблицу ресторанов."""
     display_cols = [
-        "id", "name", "city", "place_type", "yandex_rating", "my_avg_rating",
-        "visited", "my_service_rating", "my_food_rating", "my_coffee_rating",
-        "my_interior_rating", "tags", "processed_tags", "address",
+        "id",
+        "name",
+        "city",
+        "place_type",
+        "yandex_rating",
+        "my_avg_rating",
+        "visited",
+        "my_service_rating",
+        "my_food_rating",
+        "my_coffee_rating",
+        "my_interior_rating",
+        "tags",
+        "processed_tags",
+        "address",
     ]
     existing_display_cols = [c for c in display_cols if c in filtered_df.columns]
-    table_df = filtered_df[existing_display_cols].sort_values(by=["city", "name"], na_position="last").copy()
+    table_df = (
+        filtered_df[existing_display_cols]
+        .sort_values(by=["city", "name"], na_position="last")
+        .copy()
+    )
     st.dataframe(
-        table_df.drop(
-            columns=["id"]) if "id" in table_df.columns else table_df,
+        table_df.drop(columns=["id"]) if "id" in table_df.columns else table_df,
         use_container_width=True,
-        height=420)
+        height=420,
+    )

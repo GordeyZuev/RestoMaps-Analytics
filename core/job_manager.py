@@ -1,13 +1,13 @@
 import signal
 import sys
 import time
-from typing import Dict, Any
+from typing import Any
 
 from core.scheduler import Scheduler
-from logger import get_logger
+from jobs.nlp_processing_job import NLPProcessingJob
 from jobs.notion_sync_job import NotionSyncJob
 from jobs.reviews_parsing_job import ReviewsParsingJob
-from jobs.nlp_processing_job import NLPProcessingJob
+from logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -25,7 +25,7 @@ class JobManager:
         self.jobs = {
             "notion_sync": NotionSyncJob(),
             "reviews_parsing": ReviewsParsingJob(batch_size=10, max_reviews=100),
-            "nlp_processing": NLPProcessingJob(batch_size=50, force_reprocess=False)
+            "nlp_processing": NLPProcessingJob(batch_size=50, force_reprocess=False),
         }
         logger.info(f"Инициализировано джобов: {len(self.jobs)}")
 
@@ -42,46 +42,45 @@ class JobManager:
 
     def _setup_scheduled_jobs(self):
         """Настроить запланированные джобы"""
-
         # Синхронизация с Notion - каждый день в 06:00
         self.scheduler.add_job(
             func=self.run_job,
-            trigger='cron',
+            trigger="cron",
             hour=6,
             minute=0,
-            args=['notion_sync'],
-            id='notion_sync_scheduled',
-            name='Синхронизация с Notion',
-            replace_existing=True
+            args=["notion_sync"],
+            id="notion_sync_scheduled",
+            name="Синхронизация с Notion",
+            replace_existing=True,
         )
 
         # Парсинг отзывов - каждый день в 08:00
         self.scheduler.add_job(
             func=self.run_job,
-            trigger='cron',
+            trigger="cron",
             hour=8,
             minute=0,
-            args=['reviews_parsing'],
-            id='reviews_parsing_scheduled',
-            name='Парсинг отзывов',
-            replace_existing=True
+            args=["reviews_parsing"],
+            id="reviews_parsing_scheduled",
+            name="Парсинг отзывов",
+            replace_existing=True,
         )
 
         # NLP обработка - каждый день в 09:00 (после парсинга)
         self.scheduler.add_job(
             func=self.run_job,
-            trigger='cron',
+            trigger="cron",
             hour=9,
             minute=0,
-            args=['nlp_processing'],
-            id='nlp_processing_scheduled',
-            name='NLP обработка',
-            replace_existing=True
+            args=["nlp_processing"],
+            id="nlp_processing_scheduled",
+            name="NLP обработка",
+            replace_existing=True,
         )
 
         logger.info("Запланированные джобы настроены")
 
-    def run_job(self, job_name: str) -> Dict[str, Any]:
+    def run_job(self, job_name: str) -> dict[str, Any]:
         """Запустить джоб"""
         if job_name not in self.jobs:
             error_msg = f"Джоб '{job_name}' не найден"
@@ -91,12 +90,12 @@ class JobManager:
         job = self.jobs[job_name]
         return job.run()
 
-    def run_job_now(self, job_name: str) -> Dict[str, Any]:
+    def run_job_now(self, job_name: str) -> dict[str, Any]:
         """Запустить джоб немедленно"""
         logger.info(f"Немедленный запуск джоба: {job_name}")
         return self.run_job(job_name)
 
-    def get_scheduler_status(self) -> Dict[str, Any]:
+    def get_scheduler_status(self) -> dict[str, Any]:
         """Получить статус планировщика"""
         return self.scheduler.get_status()
 
@@ -115,7 +114,8 @@ def get_job_manager() -> JobManager:
 
 def main():
     """Основная функция для запуска менеджера"""
-    def signal_handler(signum, frame):
+
+    def signal_handler(signum, _frame):
         logger.info(f"Получен сигнал {signum}, останавливаем менеджер...")
         manager.stop()
         sys.exit(0)

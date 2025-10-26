@@ -1,31 +1,33 @@
-from typing import Optional
-from database.database import init_db as db_init_db
-from core.job_manager import get_job_manager
-from parsers.ya_maps_reviews_parser import fetch_reviews_for_all_restaurants
-from parsers.notion_data import sync_notion_data
-from logger import logger
-import sys
-import subprocess
-import argparse
-import time
+from pathlib import Path
 import signal
 import socket
-from pathlib import Path
+import subprocess
+import sys
+import time
+
+import click
+
+from core.job_manager import get_job_manager
+from database.database import init_db as db_init_db
+from logger import logger
+from parsers.notion_data import sync_notion_data
+from parsers.ya_maps_reviews_parser import fetch_reviews_for_all_restaurants
 
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 
-def find_free_port(start_port: int = 8501, max_attempts: int = 10) -> Optional[int]:
+def find_free_port(start_port: int = 8501, max_attempts: int = 10) -> int | None:
     """Найти свободный порт начиная с start_port"""
     for port in range(start_port, start_port + max_attempts):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('', port))
+                s.bind(("", port))
                 return port
         except OSError:
             continue
     return None
+
 
 def run_ui() -> None:
     """Запускает веб-интерфейс Streamlit"""
@@ -39,13 +41,20 @@ def run_ui() -> None:
 
         logger.info(f"Запуск на порту {port}")
 
-        subprocess.run([
-            sys.executable, "-m", "streamlit", "run", "core/app.py",
-            f"--server.port={port}",
-            "--server.address=0.0.0.0",
-            "--server.headless=true",
-            "--browser.gatherUsageStats=false"
-        ], check=True)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "streamlit",
+                "run",
+                "core/app.py",
+                f"--server.port={port}",
+                "--server.address=0.0.0.0",
+                "--server.headless=true",
+                "--browser.gatherUsageStats=false",
+            ],
+            check=True,
+        )
     except subprocess.CalledProcessError as e:
         logger.error(f"Ошибка запуска Streamlit: {e}")
 
@@ -75,19 +84,15 @@ def run_init_db() -> None:
         logger.error(f"Ошибка инициализации БД: {e}")
 
 
-def run_reviews_parsing(limit_restaurants: Optional[int] = 50) -> None:
+def run_reviews_parsing(limit_restaurants: int | None = 50) -> None:
     """Парсинг отзывов с Яндекс.Карт"""
-    logger.info("Парсинг отзывов...")
-
     try:
         result = fetch_reviews_for_all_restaurants(limit_restaurants=limit_restaurants)
 
         if result.get("success"):
             logger.success("Парсинг завершен")
-            logger.info(f"Найдено отзывов: {result.get('total_reviews_found', 0)}")
-            logger.info(f"Новых отзывов: {result.get('total_new_reviews', 0)}")
         else:
-            logger.error(f"Ошибка парсинга: {result.get('error', 'Неизвестная ошибка')}")
+            logger.error(f"Ошибка: {result.get('error', 'Неизвестная ошибка')}")
 
     except Exception as e:
         logger.error(f"Ошибка: {e}")
@@ -95,17 +100,31 @@ def run_reviews_parsing(limit_restaurants: Optional[int] = 50) -> None:
 
 def run_nlp_processing() -> None:
     """NLP обработка отзывов"""
-    logger.info("NLP обработка отзывов...")
-    
     try:
         manager = get_job_manager()
-        result = manager.run_job_now('nlp_processing')
-        
+        result = manager.run_job_now("nlp_processing")
+
         if result.get("success"):
             logger.success("NLP обработка завершена")
         else:
-            logger.error(f"Ошибка NLP обработки: {result.get('error', 'Неизвестная ошибка')}")
-            
+            logger.error(f"Ошибка: {result.get('error', 'Неизвестная ошибка')}")
+
+    except Exception as e:
+        logger.error(f"Ошибка: {e}")
+
+
+def run_failed_restaurants_check(limit_restaurants: int | None = 20) -> None:
+    """Повторная проверка ресторанов с ошибками"""
+    try:
+        from parsers.ya_maps_reviews_parser import fetch_reviews_for_failed_restaurants
+
+        result = fetch_reviews_for_failed_restaurants(limit_restaurants=limit_restaurants)
+
+        if result.get("success"):
+            logger.success("Повторная проверка завершена")
+        else:
+            logger.error(f"Ошибка: {result.get('error', 'Неизвестная ошибка')}")
+
     except Exception as e:
         logger.error(f"Ошибка: {e}")
 
@@ -114,38 +133,38 @@ def run_initial_full_cycle() -> None:
     """Запускает полный первоначальный цикл для всех ресторанов"""
     logger.info("Запуск полного первоначального цикла...")
     logger.info("Обрабатываются ВСЕ рестораны без ограничений")
-    
+
     try:
         # Этап 1: Синхронизация с Notion
-        logger.info("\n" + "="*60)
+        logger.info("\n" + "=" * 60)
         logger.info("ЭТАП 1/4: Синхронизация с Notion")
-        logger.info("="*60)
+        logger.info("=" * 60)
         run_notion_sync()
-        
+
         # Этап 2: Парсинг отзывов для ВСЕХ ресторанов
-        logger.info("\n" + "="*60)
+        logger.info("\n" + "=" * 60)
         logger.info("ЭТАП 2/4: Парсинг отзывов для всех ресторанов")
-        logger.info("="*60)
+        logger.info("=" * 60)
         run_reviews_parsing(limit_restaurants=None)  # Без лимита
-        
+
         # Этап 3: NLP обработка
-        logger.info("\n" + "="*60)
+        logger.info("\n" + "=" * 60)
         logger.info("ЭТАП 3/4: NLP обработка отзывов")
-        logger.info("="*60)
+        logger.info("=" * 60)
         run_nlp_processing()
-        
+
         # Этап 4: Запуск планировщика для регулярных задач
-        logger.info("\n" + "="*60)
+        logger.info("\n" + "=" * 60)
         logger.info("ЭТАП 4/4: Запуск планировщика для регулярных задач")
-        logger.info("="*60)
+        logger.info("=" * 60)
         logger.info("Планировщик будет выполнять задачи по расписанию:")
         logger.info("   - Notion sync: каждый день в 06:00")
         logger.info("   - Reviews parsing: каждый день в 08:00")
         logger.info("   - NLP processing: каждый день в 09:00")
-        
+
         # Запускаем планировщик (это блокирующий вызов)
         run_scheduler()
-        
+
     except KeyboardInterrupt:
         logger.info("Остановлено пользователем")
     except Exception as e:
@@ -165,7 +184,7 @@ def run_scheduler() -> None:
         logger.info("   - Reviews parsing: каждый день в 08:00")
         logger.info("   - NLP processing: каждый день в 09:00")
 
-        def signal_handler(signum, frame):
+        def signal_handler(_signum, _frame):
             logger.info("Остановка планировщика...")
             manager.stop()
             sys.exit(0)
@@ -181,7 +200,7 @@ def run_scheduler() -> None:
         manager.stop()
     except Exception as e:
         logger.error(f"Ошибка планировщика: {e}")
-        if 'manager' in locals():
+        if "manager" in locals():
             manager.stop()
 
 
@@ -192,18 +211,22 @@ def run_full() -> None:
     try:
         # Запускаем планировщик в фоне
         logger.info("Запуск планировщика в фоновом режиме...")
-        scheduler_process = subprocess.Popen([
-            sys.executable, __file__, "--scheduler"
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        scheduler_process = subprocess.Popen(
+            [sys.executable, __file__, "--scheduler"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         logger.info("Планировщик запущен в фоне")
 
         logger.info("Этап 1/3: Синхронизация с Notion")
         run_notion_sync()
 
         logger.info("Этап 2/3: Запуск фонового парсинга отзывов...")
-        subprocess.Popen([
-            sys.executable, __file__, "--reviews"
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(
+            [sys.executable, __file__, "--reviews"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         logger.info("Парсинг запущен в фоне")
 
         logger.info("Этап 3/3: Запуск веб-интерфейса")
@@ -212,46 +235,80 @@ def run_full() -> None:
 
     except KeyboardInterrupt:
         logger.info("Остановлено пользователем")
-        if 'scheduler_process' in locals():
+        if "scheduler_process" in locals():
             scheduler_process.terminate()
     except Exception as e:
         logger.error(f"Ошибка в полном цикле: {e}")
-        if 'scheduler_process' in locals():
+        if "scheduler_process" in locals():
             scheduler_process.terminate()
 
 
-def main() -> None:
-    """Главная функция"""
-    parser = argparse.ArgumentParser(description="RestoMaps Analytics")
-    parser.add_argument("--ui", action="store_true", help="Запустить веб-интерфейс")
-    parser.add_argument("--init-db", action="store_true", help="Инициализировать базу данных")
-    parser.add_argument("--notion", action="store_true", help="Синхронизировать с Notion")
-    parser.add_argument("--reviews", action="store_true", help="Парсить отзывы")
-    parser.add_argument("--scheduler", action="store_true", help="Запустить планировщик задач")
-    parser.add_argument("--full", action="store_true", help="Полный цикл: Scheduler + Notion + Reviews + UI")
-    parser.add_argument("--initial", action="store_true", help="Полный первоначальный прогон для всех ресторанов + планировщик")
-
-    args = parser.parse_args()
-
+@click.group()
+@click.version_option(version="1.0.0")
+@click.pass_context
+def cli(ctx):
+    """RestoMaps Analytics - Система аналитики ресторанов"""
+    ctx.ensure_object(dict)
     logger.info("RestoMaps Analytics")
 
-    if args.initial:
-        run_initial_full_cycle()
-    elif args.full:
-        run_full()
-    elif args.scheduler:
-        run_scheduler()
-    elif args.init_db:
-        run_init_db()
-    elif args.ui:
-        run_ui()
-    elif args.notion:
-        run_notion_sync()
-    elif args.reviews:
-        run_reviews_parsing()
-    else:
-        run_ui()
+
+@cli.command()
+@click.option("--limit", "-l", type=int, help="Ограничить количество обрабатываемых ресторанов")
+def reviews(limit):
+    """Парсить отзывы из Яндекс.Карт"""
+    click.echo(click.style("🍽️  Парсинг отзывов из Яндекс.Карт", fg="blue", bold=True))
+    run_reviews_parsing(limit_restaurants=limit)
+
+
+@cli.command()
+def notion():
+    """Синхронизировать данные с Notion"""
+    click.echo(click.style("📝 Синхронизация с Notion", fg="green", bold=True))
+    run_notion_sync()
+
+
+@cli.command()
+def init_db():
+    """Инициализировать базу данных"""
+    click.echo(click.style("🗄️  Инициализация базы данных", fg="yellow", bold=True))
+    run_init_db()
+
+
+@cli.command()
+@click.option("--limit", "-l", type=int, default=20, help="Ограничить количество проверяемых ресторанов")
+def check_failed(limit):
+    """Повторная проверка ресторанов с ошибками"""
+    click.echo(click.style("🔧 Повторная проверка ресторанов с ошибками", fg="red", bold=True))
+    run_failed_restaurants_check(limit_restaurants=limit)
+
+
+@cli.command()
+def scheduler():
+    """Запустить планировщик задач"""
+    click.echo(click.style("⏰ Запуск планировщика задач", fg="cyan", bold=True))
+    run_scheduler()
+
+
+@cli.command()
+def ui():
+    """Запустить веб-интерфейс"""
+    click.echo(click.style("🌐 Запуск веб-интерфейса", fg="magenta", bold=True))
+    run_ui()
+
+
+@cli.command()
+def full():
+    """Полный цикл: Scheduler + Notion + Reviews + UI"""
+    click.echo(click.style("🚀 Полный цикл: Scheduler + Notion + Reviews + UI", fg="bright_green", bold=True))
+    run_full()
+
+
+@cli.command()
+def initial():
+    """Полный первоначальный прогон для всех ресторанов + планировщик"""
+    click.echo(click.style("🎯 Полный первоначальный прогон для всех ресторанов + планировщик", fg="bright_yellow", bold=True))
+    run_initial_full_cycle()
 
 
 if __name__ == "__main__":
-    main()
+    cli()

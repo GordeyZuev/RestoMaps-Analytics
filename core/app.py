@@ -1,25 +1,27 @@
 import streamlit as st
-from ui.pages.dashboard import render_dashboard
+
 from logger import logger
+from ui.pages.dashboard import render_dashboard
 
 
 def setup_page_config() -> None:
     """Настройка конфигурации страницы"""
     st.set_page_config(
-        page_title="RestoMaps Analytics (beta)", 
+        page_title="RestoMaps Analytics (beta)",
         layout="wide",
         initial_sidebar_state="expanded",
         menu_items={
-            'Get Help': None,
-            'Report a bug': None,
-            'About': "RestoMaps Analytics - Система анализа ресторанов и отзывов"
-        }
+            "Get Help": None,
+            "Report a bug": None,
+            "About": "RestoMaps Analytics - Система анализа ресторанов и отзывов",
+        },
     )
 
 
 def setup_custom_styles() -> None:
     """Настройка пользовательских стилей"""
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     /* Основные метрики */
     .stMetric {
@@ -146,7 +148,9 @@ def setup_custom_styles() -> None:
         border-radius: 8px;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 def main() -> None:
@@ -155,8 +159,8 @@ def main() -> None:
     setup_custom_styles()
 
     # Инициализация логгера в session_state
-    if 'logger' not in st.session_state:
-        st.session_state['logger'] = logger
+    if "logger" not in st.session_state:
+        st.session_state["logger"] = logger
 
     render_dashboard()
 
