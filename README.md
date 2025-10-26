@@ -225,19 +225,19 @@ cp env.example config/.env
 ### 3. Инициализация базы данных
 
 ```bash
-python main.py --init-db
+python main.py init-db
 ```
 
 ### 4. Первоначальная синхронизация
 
 ```bash
-python main.py --initial
+python main.py initial
 ```
 
 ### 5. Запуск веб-интерфейса
 
 ```bash
-python main.py --ui
+python main.py ui
 ```
 
 Откройте в браузере: http://localhost:8501

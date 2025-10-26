@@ -15,11 +15,11 @@ logs:
 
 # Синхронизация с Notion
 notion:
-	docker-compose exec app python main.py --notion
+	docker-compose exec app python main.py notion
 
 # Парсинг отзывов
 reviews:
-	docker-compose exec app python main.py --reviews
+	docker-compose exec app python main.py reviews
 
 # Бэкап базы данных
 backup:
@@ -76,17 +76,13 @@ clean-logs:
 	@rm -rf logs/*.log
 	@echo "✅ Логи очищены"
 
-# NLP обработка
-nlp:
-	docker-compose exec app python main.py --nlp
-
 # Полный запуск с планировщиком
 full:
-	docker-compose exec app python main.py --full
+	docker-compose exec app python main.py full
 
 # Инициализация БД
 init-db:
-	docker-compose exec app python main.py --init-db
+	docker-compose exec app python main.py init-db
 
 # Просмотр использования ресурсов
 stats:
@@ -141,7 +137,6 @@ help:
 	@echo "⚙️  Задачи:"
 	@echo "  make notion     - Синхронизация с Notion"
 	@echo "  make reviews    - Парсинг отзывов"
-	@echo "  make nlp        - NLP обработка"
 	@echo "  make full       - Запуск с планировщиком"
 	@echo "  make init-db    - Инициализация БД"
 	@echo "  make backup     - Бэкап БД"

@@ -212,7 +212,7 @@ def run_full() -> None:
         # Запускаем планировщик в фоне
         logger.info("Запуск планировщика в фоновом режиме...")
         scheduler_process = subprocess.Popen(
-            [sys.executable, __file__, "--scheduler"],
+            [sys.executable, __file__, "scheduler"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -223,7 +223,7 @@ def run_full() -> None:
 
         logger.info("Этап 2/3: Запуск фонового парсинга отзывов...")
         subprocess.Popen(
-            [sys.executable, __file__, "--reviews"],
+            [sys.executable, __file__, "reviews"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )

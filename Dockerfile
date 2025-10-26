@@ -36,5 +36,5 @@ ENV STREAMLIT_SERVER_PORT=8501 \
     STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 
 # Команда запуска
-CMD ["python", "main.py", "--ui"]
+CMD ["python", "main.py", "ui"]
 

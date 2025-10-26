@@ -94,10 +94,10 @@ docker-compose logs -f app
 
 ```bash
 # 1. Первоначальная синхронизация с Notion (обязательно)
-docker-compose exec app python main.py --notion
+docker-compose exec app python main.py notion
 
 # 2. Парсинг отзывов (опционально)
-docker-compose exec app python main.py --reviews
+docker-compose exec app python main.py reviews
 
 # 3. Откройте в браузере
 # http://localhost:8501
@@ -165,10 +165,10 @@ docker-compose logs -f app
 ### Запуск с планировщиком
 ```bash
 # Запуск планировщика в отдельном контейнере
-docker-compose exec app python main.py --scheduler
+docker-compose exec app python main.py scheduler
 
 # Или запуск с UI + планировщик
-docker-compose exec app python main.py --full
+docker-compose exec app python main.py full
 ```
 
 ### Настройка бэкапов
