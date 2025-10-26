@@ -149,6 +149,9 @@ docker-compose down
 # Обновление кода
 git pull origin main
 
+# Проверка качества кода (Ruff)
+make check
+
 # Пересборка и запуск
 docker-compose build --no-cache
 docker-compose up -d
@@ -178,6 +181,43 @@ docker-compose exec app python main.py --full
 
 # Просмотр бэкапов
 ./backup.sh list
+```
+
+## Разработка
+
+### Команды разработки
+```bash
+# Проверка качества кода
+make lint        # Линтинг с помощью Ruff
+make format      # Форматирование кода с помощью Ruff
+make check       # Полная проверка (линтинг + форматирование)
+
+# Отладка
+make shell       # Подключение к контейнеру для отладки
+```
+
+### Click CLI команды
+```bash
+# Прямой запуск команд через Click
+python main.py --help                    # Справка по командам
+python main.py ui                        # Запуск веб-интерфейса
+python main.py notion                    # Синхронизация с Notion
+python main.py reviews                   # Парсинг отзывов
+python main.py init-db                   # Инициализация БД
+python main.py scheduler                 # Запуск планировщика
+python main.py check-failed              # Повторная проверка ресторанов с ошибками
+```
+
+### Ruff конфигурация
+```bash
+# Проверка конкретного файла
+ruff check parsers/ya_maps_reviews_parser.py
+
+# Автоисправление ошибок
+ruff check --fix .
+
+# Форматирование с проверкой
+ruff format --check .
 ```
 
 ## Устранение неполадок

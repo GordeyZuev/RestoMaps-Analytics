@@ -518,6 +518,143 @@ class RestaurantData(BaseModel):
         return v
 ```
 
+## CLI Interface (Click)
+
+### Click Commands
+
+Система использует Click для создания удобного командного интерфейса:
+
+```python
+# main.py
+import click
+from core.app import run_ui
+from core.job_manager import JobManager
+
+@click.group()
+def cli():
+    """RestoMaps Analytics - система анализа ресторанов"""
+    pass
+
+@cli.command()
+def ui():
+    """Запуск веб-интерфейса"""
+    run_ui()
+
+@cli.command()
+def notion():
+    """Синхронизация с Notion"""
+    job_manager = JobManager()
+    job_manager.run_notion_sync()
+
+@cli.command()
+def reviews():
+    """Парсинг отзывов с Яндекс.Карт"""
+    job_manager = JobManager()
+    job_manager.run_reviews_parsing()
+
+@cli.command()
+@click.option("--limit", "-l", type=int, default=20, help="Ограничить количество проверяемых ресторанов")
+def check_failed(limit):
+    """Повторная проверка ресторанов с ошибками"""
+    job_manager = JobManager()
+    job_manager.run_failed_restaurants_check(limit_restaurants=limit)
+
+@cli.command()
+def init_db():
+    """Инициализация базы данных"""
+    from database.database_manager import init_database
+    init_database()
+
+@cli.command()
+def scheduler():
+    """Запуск планировщика задач"""
+    from core.scheduler import run_scheduler
+    run_scheduler()
+
+if __name__ == "__main__":
+    cli()
+```
+
+### Click Features
+
+- **Автоматическая генерация help** - `python main.py --help`
+- **Валидация параметров** - автоматическая проверка типов
+- **Цветной вывод** - улучшенный UX в терминале
+- **Группировка команд** - логическая организация функций
+
+## Code Quality (Ruff)
+
+### Ruff Configuration
+
+```toml
+# pyproject.toml
+[tool.ruff]
+exclude = [
+    ".git", ".venv", "__pycache__", "*.pyc", 
+    ".pytest_cache", "logs", "backups"
+]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "B", "C4", "UP", "ARG", 
+    "SIM", "TCH", "TID", "Q", "S", "N", "D", 
+    "RET", "PIE", "T20", "PT", "RUF"
+]
+ignore = [
+    "D100", "D101", "D102", "D103", "D104", "D105", "D107",
+    "D203", "D213", "D400", "D401", "D415", "S101", "S104",
+    "S108", "S603", "S607", "T201", "PLR0913", "PLR0912",
+    "PLR0915", "PLR2004", "RET504", "RET505", "RUF012",
+    "RUF001", "RUF002", "RUF003", "E501"
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["database", "parsers", "ui", "core", "jobs", "scripts", "config"]
+force-sort-within-sections = true
+split-on-trailing-comma = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+```
+
+### Ruff Commands
+
+```bash
+# Линтинг
+ruff check .
+
+# Форматирование
+ruff format .
+
+# Автоисправление
+ruff check --fix .
+
+# Проверка конкретного файла
+ruff check parsers/ya_maps_reviews_parser.py
+```
+
+### Integration with Makefile
+
+```makefile
+# Makefile
+.PHONY: lint format check
+
+lint:
+	ruff check .
+
+format:
+	ruff format .
+
+check: lint format
+	@echo "Code quality check completed"
+```
+
 ## Тестирование
 
 ### Unit Tests
